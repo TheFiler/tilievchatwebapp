@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Room</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.4.0/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+        }
+        .chat-container {
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .chat-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #users {
+            list-style-type: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+        #messages {
+            list-style-type: none;
+            padding: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 10px;
+            background-color: #f8f9fa;
+        }
+        #messages li {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            max-width: 80%;
+        }
+        #messageForm {
+            display: flex;
+            margin-top: 20px;
+        }
+        #nameInput {
+            width: 20%;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 5px 0 0 5px;
+        }
+        #messageInput {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 0;
+        }
+        #sendButton {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+        }
+        #sendButton:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <h2 class="chat-header">Chat Room</h2>
+    <ul id="users" class="list-group"></ul>
+    <div id="conversationDiv">
+        <ul id="messages"></ul>
+    </div>
+    <form id="messageForm">
+        <input type="text" id="nameInput" autocomplete="off" class="form-control" placeholder="Name" required />
+        <input type="text" id="messageInput" autocomplete="off" class="form-control" placeholder="Type your message here..." required />
+        <button id="sendButton" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
+    </form>
+</div>
+
+<script>
+        var stompClient = null;
+        var username = null;
+
+        function connect() {
+            username = document.getElementById('nameInput').value.trim();
+            if (username) {
+                var socket = new SockJS('/chat');
+                stompClient = Stomp.over(socket);
+                stompClient.connect({}, function (frame) {
+                    console.log('Connected: ' + frame);
+                    stompClient.subscribe('/topic/messages', function (message) {
+                        showMessage(JSON.parse(message.body));
+                    });
+                    stompClient.subscribe('/topic/history', function (message) {
+                        var messages = JSON.parse(message.body);
+                        messages.reverse().forEach(function(msg) {
+                            showMessage(msg);
+                        });
+                    });
+                    stompClient.subscribe('/topic/users', function (message) {
+                        updateUsers(JSON.parse(message.body));
+                    });
+                    stompClient.send("/app/history", {}, {});
+                    stompClient.send("/app/users", {}, {});
+                });
+            } else {
+                alert("Please enter your name.");
+            }
+        }
+
+        function sendMessage() {
+            var messageContent = document.getElementById('messageInput').value;
+            if(messageContent && stompClient) {
+                var chatMessage = {
+                    sender: username,
+                    content: messageContent
+                };
+                stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
+                document.getElementById('messageInput').value = '';
+            }
+        }
+
+        function showMessage(message) {
+            var messages = document.getElementById('messages');
+            var messageElement = document.createElement('li');
+            var messageText = document.createTextNode(message.sender + " (" + new Date(message.timestamp).toLocaleTimeString() + "): " + message.content);
+            messageElement.appendChild(messageText);
+            messages.appendChild(messageElement);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function updateUsers(users) {
+            var usersList = document.getElementById('users');
+            usersList.innerHTML = '';
+            users.forEach(function(user) {
+                var userElement = document.createElement('li');
+                userElement.className = 'list-group-item';
+                userElement.appendChild(document.createTextNode(user.username + " (Last posted: " + new Date(user.lastPosted).toLocaleTimeString() + ")"));
+                usersList.appendChild(userElement);
+            });
+        }
+
+        document.getElementById('messageForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (!username) {
+                connect();
+            } else {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
