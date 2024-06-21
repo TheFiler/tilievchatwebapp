@@ -28,7 +28,7 @@ This is a simple chat room application built with Java and Spring Boot. The appl
 ## Getting Started
 
 ### Prerequisites
-- Java 11+
+- Java 17+
 - Maven
 - An IDE (e.g., IntelliJ IDEA, Eclipse)
 
