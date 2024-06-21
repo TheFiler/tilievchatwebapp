@@ -35,7 +35,7 @@ This is a simple chat room application built with Java and Spring Boot. The appl
 ### Installation
 1. Clone the repository:
     ```bash
-    git clone https://git-iit.fh-joanneum.at/x62p13/websocket_chatapplication
+    git clone https://github.com/TheFiler/tilievchatwebapp
     ```
 2. Navigate to the project directory:
     ```bash
